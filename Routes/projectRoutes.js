@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 
-const upload = require("../middlewares/upload");
+const upload = require("../Middlewares/upload");
 
 const {
   // createProject,
