@@ -5,7 +5,7 @@ const Organizer = require("../Models/Organizer");
 const jwt = require("jsonwebtoken");
 const Projects = require("../Models/Project");
 const sendMail = require("../Utils/sendMail");
-const Vote = require("../models/Vote");
+const Vote = require("..//Models/Vote");
 
 const applyOrganizer = async (req, res) => {
   try {

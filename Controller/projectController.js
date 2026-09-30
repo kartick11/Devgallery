@@ -101,7 +101,7 @@ const getMyProjects = async (req, res) => {
 };
 
 const jwt = require("jsonwebtoken"); // Ensure this is imported at the top
-const Vote = require("../models/Vote"); // Ensure your Vote model is imported
+const Vote = require("..//Models/Vote"); // Ensure your Vote model is imported
 
 const getProjectById = async (req, res) => {
   try {

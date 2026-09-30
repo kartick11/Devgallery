@@ -1,4 +1,4 @@
-const Vote = require("../Models/Vote");
+const Vote = require("..//Models/Vote");
 const Project = require("../Models/Project");
 
 const calculateEuclideanDistance = (pattern1, pattern2) => {
