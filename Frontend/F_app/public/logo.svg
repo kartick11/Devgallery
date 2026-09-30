@@ -1,0 +1,8 @@
+<svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left Chevron (The straight back of the D) -->
+  <path d="M 22 8 L 6 25 L 22 42 L 22 32 L 12 25 L 22 18 Z" fill="#4F46E5" />
+  <!-- The segmented curve of the D -->
+  <path d="M 22 8 h 10 a 17 17 0 0 1 0 34 h -10 v -9 h 10 a 8 8 0 0 0 0 -16 h -10 z" fill="#38BDF8" />
+  <!-- Inner {/} Code brackets -->
+  <text x="24" y="30" fill="#4F46E5" fontSize="14" fontWeight="bold" fontFamily="monospace">{/}</text>
+</svg>
