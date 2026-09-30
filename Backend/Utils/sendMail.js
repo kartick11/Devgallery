@@ -10,6 +10,8 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL,
     pass: process.env.EMAIL_PASSWORD, // Must be an App Password, not your real password
   },
+  // Add this line to fix the ENETUNREACH IPv6 error on Vercel:
+  family: 4 
 });
 
 const sendMail = async ({
