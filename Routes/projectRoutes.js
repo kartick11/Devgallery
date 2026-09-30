@@ -11,8 +11,8 @@ const {
   getProjectsByName,
   // deleteProject,
   getMyProjects,
-} = require("../controller/projectController");
-const { submitVote } = require("../controller/voteController");
+} = require("../Controller/projectController");
+const { submitVote } = require("../Controller/voteController");
 
 // router.post(
 //   "/create",

@@ -12,12 +12,12 @@ const {
   getOrganizerProfile,
   requestAccountDeletion,
   cancelAccountDeletion,
-} = require("../controller/organizerController");
+} = require("../Controller/organizerController");
 
 const {
   createProject,
   deleteProject,
-} = require("../controller/projectController");
+} = require("../Controller/projectController");
 
 router.get("/profile", organizerAuth, getOrganizerProfile);
 router.post("/create", organizerAuth, upload.single("image"), createProject);

@@ -9,8 +9,8 @@ const {
   adminLogin,
   adminDeleteOrganizer,
   adminCancelAccountDeletion,
-} = require("../controller/adminController");
-const adminAuth = require("../middlewares/adminAuth");
+} = require("../Controller/adminController");
+const adminAuth = require("../Middlewares/adminAuth");
 
 router.get("/organizers", adminAuth, getAllOrganizers);
 

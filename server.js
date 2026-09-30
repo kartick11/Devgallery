@@ -15,7 +15,7 @@ const adminRoutes = require("./Routes/adminRoutes");
 
 
 // Controller & Middleware Imports
-const { streamAndUpload, deleteFile } = require("./controller/claudinary");
+const { streamAndUpload, deleteFile } = require("./Controller/claudinary");
 // const organizerAuth = require("./Middlewares/organizerAuth"); // Imported but not used globally
 
 const app = express();
