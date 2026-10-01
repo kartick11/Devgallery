@@ -1,5 +1,6 @@
 const sendMail = async ({ to, subject, text = "", html = "" }) => {
   try {
+    console.log("My API Key is:", process.env.BREVO_API_KEY);
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
