@@ -475,43 +475,72 @@ const login = async (req, res) => {
 const sendSignupOtp = async (req, res) => {
   try {
     const { officialEmail } = req.body;
+
+    // Safety check: Prevent crashes if the frontend sends an empty request
+    if (!officialEmail) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
     // 1. Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     // 2. Save to your existing OTP database model
-    // FIX: Change 'email' to 'officialEmail' here
     await Otp.deleteMany({ officialEmail: officialEmail });
     await Otp.create({ officialEmail: officialEmail, otp });
 
-    // 3. Send email using your existing mailer
+    // 3. Send email using your existing mailer (Awaited so Vercel doesn't kill it early)
     await sendMail({
       to: officialEmail,
       subject: "Verify your DevGallery Application",
       text: `Your signup verification code is ${otp}.`,
     });
 
+    // 4. Send success response only AFTER the email successfully leaves the server
     res.status(200).json({ success: true, message: "OTP sent!" });
+    
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("OTP Route Error:", error);
+    res.status(500).json({ success: false, message: error.message || "Internal server error" });
   }
 };
 const verifySignupOtp = async (req, res) => {
   try {
     const { officialEmail, otp } = req.body;
 
-    // FIX: Change 'email' to 'officialEmail' to match your database schema
-    const isValid = await Otp.findOne({ officialEmail, otp });
+    // 1. Safety check: Ensure both fields were actually provided
+    if (!officialEmail || !otp) {
+      return res.status(400).json({ success: false, message: "Email and OTP are required" });
+    }
 
-    if (!isValid)
+    // 2. Find the OTP in the database
+    const existingOtp = await Otp.findOne({ officialEmail, otp });
+
+    if (!existingOtp) {
       return res.status(400).json({ success: false, message: "Invalid OTP" });
+    }
+
+    // 3. Expiration check (Optional but recommended)
+    // Assuming you have a 'createdAt' timestamp in your Otp schema
+    // This checks if the OTP is older than 10 minutes (600,000 milliseconds)
+    if (existingOtp.createdAt) {
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      if (existingOtp.createdAt < tenMinutesAgo) {
+        // Delete the expired OTP so it can't be used again
+        await Otp.deleteOne({ _id: existingOtp._id });
+        return res.status(400).json({ success: false, message: "OTP has expired. Please request a new one." });
+      }
+    }
 
     // Note: Do NOT delete the OTP here yet! We will delete it inside the signup function
     // to ensure the email is actually verified during the final save.
     res.status(200).json({ success: true, message: "OTP is valid." });
+    
   } catch (error) {
+    console.error("OTP Verification Error:", error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 module.exports = {
   verifyPin,
   sendPinResetOtp,
