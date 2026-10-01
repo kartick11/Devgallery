@@ -494,6 +494,7 @@ const sendSignupOtp = async (req, res) => {
       subject: "Verify your DevGallery Application",
       text: `Your signup verification code is ${otp}.`,
     });
+    console.log(officialEmail)
     console.log(otp)
     // 4. Send success response only AFTER the email successfully leaves the server
     res.status(200).json({ success: true, message: "OTP sent!" });
