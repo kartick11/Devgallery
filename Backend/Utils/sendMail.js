@@ -1,23 +1,33 @@
-const { Resend } = require("resend");
-
-// Initialize Resend with your API key
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const sendMail = async ({ to, subject, text = "", html = "" }) => {
   try {
-    const data = await resend.emails.send({
-      // IMPORTANT: While on the free testing tier, you MUST use this exact 'from' address
-      from: "DevGallery Team <onboarding@resend.dev>",
-      reply_to: "kartickmallav1811@gmail.com",
-      to,
-      subject,
-      text,
-      html,
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        // This grabs your API key from Render
+        "api-key": process.env.BREVO_API_KEY, 
+      },
+      body: JSON.stringify({
+        // MUST match the Gmail address you verified in Step 1
+        sender: { name: "DevGallery Team", email: "mallavkartick9921@gmail.com" }, 
+        to: [{ email: to }],
+        subject: subject,
+        // Brevo uses htmlContent and textContent
+        htmlContent: html ? html : undefined,
+        textContent: text && !html ? text : undefined, 
+      }),
     });
-    
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to send email via Brevo");
+    }
+
     return data;
   } catch (error) {
-    console.error("Resend Mail Error:", error);
+    console.error("Brevo Mail Error:", error);
     throw error;
   }
 };
