@@ -17,7 +17,7 @@ const approveOrganizer = async (req, res) => {
       });
     }
 
-    // Create Organizer
+    // 1. Create the verified Organizer
     const organizer = await Organizer.create({
       organizationName: application.organizationName,
       officialEmail: application.officialEmail,
@@ -26,11 +26,10 @@ const approveOrganizer = async (req, res) => {
       isVerified: true,
     });
 
-    // Send approval email
+    // 2. Send approval email (This is now fast because of Resend)
     try {
-      const mailInfo = await sendMail({
+      await sendMail({
         to: application.officialEmail,
-        // Removed the emoji and softened the spam-trigger words
         subject: "Your DevGallery Organization has been approved",
         text: `Hello,\n\nYour organization ${application.organizationName} has been approved on DevGallery.\n\nYou can now log in and start uploading projects.\n\nBest regards,\nThe DevGallery Team`,
         html: `
@@ -51,17 +50,20 @@ const approveOrganizer = async (req, res) => {
     `,
       });
     } catch (mailError) {
+      // If the email fails, it will log the error but still approve the user
       console.error("Approval Email Error:", mailError);
     }
 
-    // Remove application after successful approval
+    // 3. Remove application after successful approval
     await OrganizerApplication.findByIdAndDelete(req.params.id);
 
+    // 4. Send success response back to the frontend
     res.status(200).json({
       success: true,
       message: "Organizer approved successfully",
       organizer,
     });
+    
   } catch (error) {
     console.error("Approve Organizer Error:", error);
 
@@ -71,6 +73,7 @@ const approveOrganizer = async (req, res) => {
     });
   }
 };
+
 const getPendingApplications = async (req, res) => {
   try {
     const applications = await OrganizerApplication.find({
@@ -107,7 +110,7 @@ const rejectOrganizer = async (req, res) => {
       await BlockedEmail.findOneAndUpdate(
         { email: application.officialEmail },
         { email: application.officialEmail },
-        { upsert: true, new: true }, // upsert creates it if it doesn't exist
+        { upsert: true, new: true } // upsert creates it if it doesn't exist
       );
     }
 
@@ -142,6 +145,7 @@ const rejectOrganizer = async (req, res) => {
         ? "Application rejected and email blocked"
         : "Application rejected",
     });
+    
   } catch (error) {
     console.error("Reject API Error:", error);
     res.status(500).json({
@@ -150,6 +154,8 @@ const rejectOrganizer = async (req, res) => {
     });
   }
 };
+
+
 const getAllOrganizers = async (req, res) => {
   try {
     const organizers = await Organizer.find().select("-password");
@@ -310,29 +316,20 @@ const adminCancelAccountDeletion = async (req, res) => {
     // 1. Admin Session Validation
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-      return res
-        .status(401)
-        .json({ success: false, message: "No token provided." });
+      return res.status(401).json({ success: false, message: "No token provided." });
     }
     const currentToken = authHeader.replace("Bearer ", "");
 
     const adminFromDB = await Admin.findOne({ tempJwtToken: currentToken });
     if (!adminFromDB) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "Admin not found or session expired.",
-        });
+      return res.status(404).json({ success: false, message: "Admin not found or session expired." });
     }
 
     // 2. Find the Organizer
     const organizer = await Organizer.findById(organizerId);
 
     if (!organizer) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Organizer not found" });
+      return res.status(404).json({ success: false, message: "Organizer not found" });
     }
 
     if (!organizer.isPendingDeletion) {
@@ -342,48 +339,52 @@ const adminCancelAccountDeletion = async (req, res) => {
       });
     }
 
-    // 3. Attempt to send the email FIRST
-    // If sendMail fails, it stops execution and jumps to the catch block
-    await sendMail({
-      to: organizer.officialEmail,
-      subject: "Account Restored: Your DevGallery Deletion was Cancelled",
-      text: `Hello ${organizer.organizationName}, your account deletion has been cancelled by an administrator.`,
-      html: `
-        <h2>Account Deletion Cancelled</h2>
-        <p>Hello <b>${organizer.organizationName}</b>,</p>
-        <p>Good news! An administrator has cancelled the scheduled deletion of your DevGallery organizer account.</p>
-        <p>Your account is now fully active, and any hidden projects have been restored to the public gallery.</p>
-        <p>If you have any questions, please contact support.</p>
-        <p>Thank you,<br/>The DevGallery Team</p>
-      `,
-    });
-
-    // 4. Update the database ONLY if the email succeeds
+    // 3. Update the database FIRST (The critical action)
     organizer.isPendingDeletion = false;
     organizer.deletionScheduledAt = null;
     organizer.deletionRequestedByRole = null;
     organizer.deletionRequesterId = null;
     organizer.deletionReason = null;
     organizer.deletionCustomReason = null;
-
-    // Unhide projects in case the admin hid them when scheduling the deletion
     organizer.hideProjects = false;
-
-    // Clear the cooldown so the user gets a clean slate
     organizer.deletionCooldownUntil = null;
 
     await organizer.save();
 
+    // 4. Attempt to send the email SECOND (The secondary action)
+    let emailSent = true;
+    try {
+      await sendMail({
+        to: organizer.officialEmail,
+        subject: "Account Restored: Your DevGallery Deletion was Cancelled",
+        text: `Hello ${organizer.organizationName}, your account deletion has been cancelled by an administrator.`,
+        html: `
+          <h2>Account Deletion Cancelled</h2>
+          <p>Hello <b>${organizer.organizationName}</b>,</p>
+          <p>Good news! An administrator has cancelled the scheduled deletion of your DevGallery organizer account.</p>
+          <p>Your account is now fully active, and any hidden projects have been restored to the public gallery.</p>
+          <p>If you have any questions, please contact support.</p>
+          <p>Thank you,<br/>The DevGallery Team</p>
+        `,
+      });
+    } catch (mailError) {
+      console.error("Admin Cancel Deletion Email Error:", mailError);
+      emailSent = false; // Flag that the email failed, but don't crash the request
+    }
+
+    // 5. Return a dynamic success message
     return res.status(200).json({
       success: true,
-      message: "Account deletion cancelled and organizer notified via email.",
+      message: emailSent 
+        ? "Account deletion cancelled and organizer notified via email."
+        : "Account deletion cancelled, but the notification email failed to send.",
     });
+
   } catch (error) {
     console.error("Admin Cancel Deletion Error:", error);
     return res.status(500).json({
       success: false,
-      message:
-        "Failed to process request. If the email failed, the account deletion was NOT cancelled.",
+      message: "Failed to process request.",
       error: error.message,
     });
   }
