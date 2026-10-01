@@ -1,7 +1,16 @@
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
-// Initialize Resend with your environment variable
-const resend = new Resend(process.env.RESEND_API_KEY);
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, 
+  auth: {
+    user: process.env.EMAIL,
+    pass: process.env.EMAIL_PASSWORD, // Must be a Gmail App Password
+  },
+  // CRITICAL FIX: Forces IPv4 to bypass Vercel's ENETUNREACH error
+  family: 4 
+});
 
 const sendMail = async ({
   to,
@@ -10,23 +19,18 @@ const sendMail = async ({
   html = "",
 }) => {
   try {
-    const data = await resend.emails.send({
-      // Note: While testing, Resend requires you to use this specific 'from' address
-      // and you can only send emails to the email address you signed up with.
-      // To send to any user, you will need to add your own domain in the Resend dashboard later.
-      from: "DevGallery Team <onboarding@resend.dev>", 
-      
-      reply_to: process.env.EMAIL, // Keeps your existing reply-to logic
+    const info = await transporter.sendMail({
+      from: `"DevGallery Team" <${process.env.EMAIL}>`, 
+      replyTo: process.env.EMAIL, 
       to,
       subject,
       text,
       html,
     });
-
-    return data;
+    return info;
   } catch (error) {
     console.error("Mail Error:", error);
-    throw error;
+    throw error; // Passes the error to your route controller so you can see it
   }
 };
 
